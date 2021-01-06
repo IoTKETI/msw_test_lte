@@ -240,6 +240,71 @@ msw_sub_fc_topic.push('/Mobius/' + config.gcs + '/Drone_Data/' + config.drone + 
 
 var msw_sub_lib_topic = [];
 
+var msw_mqtt_client = null;
+
+msw_mqtt_connect('localhost', 1883);
+
+function msw_mqtt_connect(broker_ip, port) {
+  if(msw_mqtt_client == null) {
+    var connectOptions = {
+        host: broker_ip,
+        port: port,
+        protocol: "mqtt",
+        keepalive: 10,
+        protocolId: "MQTT",
+        protocolVersion: 4,
+        clean: true,
+        reconnectPeriod: 2000,
+        connectTimeout: 2000,
+        rejectUnauthorized: false
+    };
+
+    msw_mqtt_client = mqtt.connect(connectOptions);
+
+    msw_mqtt_client.on('connect', function () {
+      console.log('[msw_mqtt_connect] connected to ' + broker_ip);
+      for(idx in msw_sub_fc_topic) {
+        if(msw_sub_fc_topic.hasOwnProperty(idx)) {
+          msw_mqtt_client.subscribe(msw_sub_fc_topic[idx]);
+          console.log('[msw_mqtt] msw_sub_fc_topic[' + idx + ']: ' + msw_sub_fc_topic[idx]);
+        }
+      }
+    });
+
+    msw_mqtt_client.on('message', function (topic, message) {
+      for(var idx in msw_sub_muv_topic) {
+        if (msw_sub_muv_topic.hasOwnProperty(idx)) {
+          if(topic == msw_sub_muv_topic[idx]) {
+            setTimeout(on_receive_from_muv, parseInt(Math.random() * 5), topic, message.toString());
+            break;
+          }
+        }
+      }
+
+      for(idx in msw_sub_lib_topic) {
+        if (msw_sub_lib_topic.hasOwnProperty(idx)) {
+          if(topic == msw_sub_lib_topic[idx]) {
+            setTimeout(on_receive_from_lib, parseInt(Math.random() * 5), topic, message.toString());
+            break;
+          }
+        }
+      }
+
+      for(idx in msw_sub_fc_topic) {
+        if (msw_sub_fc_topic.hasOwnProperty(idx)) {
+          if(topic == msw_sub_fc_topic[idx]) {
+            setTimeout(on_process_fc_data, parseInt(Math.random() * 5), topic, message.toString());
+            break;
+          }
+        }
+      }
+    });
+
+    msw_mqtt_client.on('error', function (err) {
+      console.log(err.message);
+    });
+  }
+}
 // 유저 디파인 미션 소프트웨어 기능
 //////////////////////////////////////////////////////////////////////////////
 function parseDataMission(topic, str_message) {
